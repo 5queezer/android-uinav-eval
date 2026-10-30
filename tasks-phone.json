@@ -1,0 +1,12 @@
+[
+ {"id": "phone_keypad", "kind": "open", "goal": "Open the dial pad", "package": "^com\\.google\\.android\\.dialer$", "layout_re": "^window: Phone Keypad$"},
+ {"id": "phone_recents", "kind": "open", "goal": "Show my recent calls", "package": "^com\\.google\\.android\\.dialer$", "layout_re": "^Calls you make will show up here$"},
+ {"id": "phone_contacts", "kind": "open", "goal": "Show my contacts in the Phone app", "package": "^com\\.google\\.android\\.dialer$", "layout_re": "^Your contacts are just a tap away here$"},
+ {"id": "phone_voicemail", "kind": "open", "goal": "Open my voicemail", "package": "^com\\.google\\.android\\.dialer$", "layout_re": "^Introducing visual voicemail$"},
+ {"id": "phone_settings", "kind": "open", "goal": "Open the Phone app's settings", "package": "^com\\.google\\.android\\.dialer$", "layout_re": "^Caller ID & spam$"},
+ {"id": "phone_call_history", "kind": "open", "goal": "Show the full call history", "package": "^com\\.google\\.android\\.dialer$", "layout_re": "^Missed$"},
+ {"id": "phone_blocked", "kind": "open", "goal": "Show my blocked numbers", "package": "^com\\.android\\.server\\.telecom$", "layout_re": "^window: Blocked numbers$"},
+ {"id": "phone_quick_responses", "kind": "open", "goal": "Edit the quick text replies I can send when declining a call", "package": "^com\\.android\\.server\\.telecom$", "layout_re": "^window: Edit quick responses$"},
+ {"id": "phone_call_settings", "kind": "open", "goal": "Open the call settings", "package": "^com\\.android\\.phone$", "layout_re": "^window: Call settings$"},
+ {"id": "phone_sort_order", "kind": "info", "goal": "How are contacts sorted in the Phone app?", "expected_cmd": "echo First name"}
+]
