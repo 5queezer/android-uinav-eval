@@ -1,0 +1,12 @@
+[
+ {"id": "contacts_create", "kind": "open", "goal": "Add a new contact", "package": "^com\\.google\\.android\\.contacts$", "layout_re": "^window: Create contact$"},
+ {"id": "contacts_organize", "kind": "open", "goal": "Show the tools for importing contacts", "package": "^com\\.google\\.android\\.contacts$", "layout_re": "^Import from file$"},
+ {"id": "contacts_favorites", "kind": "open", "goal": "Show my favorite contacts", "package": "^com\\.google\\.android\\.contacts$", "layout_re": "^Add favorites$"},
+ {"id": "contacts_settings", "kind": "open", "goal": "Open the Contacts app settings", "package": "^com\\.google\\.android\\.contacts$", "layout_re": "^Default account for new contacts"},
+ {"id": "contacts_sort", "kind": "info", "goal": "How are contacts sorted in the Contacts app?", "package": "^com\\.google\\.android\\.contacts$", "expected_cmd": "echo First name"},
+ {"id": "files_downloads", "kind": "open", "goal": "Show my downloaded files", "package": "^com\\.google\\.android\\.documentsui$", "layout_re": "^Files in Downloads$"},
+ {"id": "files_roots", "kind": "open", "goal": "Show all storage locations in the Files app", "package": "^com\\.google\\.android\\.documentsui$", "layout_re": "^Recent$"},
+ {"id": "files_new_folder", "kind": "open", "goal": "Create a new folder in my downloads", "package": "^com\\.google\\.android\\.documentsui$", "layout_re": "^Folder name$"},
+ {"id": "files_sort", "kind": "open", "goal": "Change how my downloaded files are sorted", "package": "^com\\.google\\.android\\.documentsui$", "layout_re": "^SORT BY$"},
+ {"id": "messages_no_account", "kind": "open", "goal": "Use the Messages app without signing in", "package": "^com\\.google\\.android\\.apps\\.messaging$", "layout_re": "^Conversation list$"}
+]

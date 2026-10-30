@@ -2,3 +2,8 @@ results/img/
 results-exp1/img/
 __pycache__/
 demo-videos/
+finetune/data/
+finetune/run/*.log
+finetune/run/demo-*/
+demo-videos*/
+results-*/img/

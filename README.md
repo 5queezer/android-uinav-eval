@@ -22,6 +22,31 @@ With the three experiment changes below (one run per task): d3:4b 19 → 20/30, 
 tev1:4b 7 → 10/30; no model claimed done on an unfinished task. Full tables: `results/report.md` and
 `results-exp1/report.md`; per-step records in the JSONL files.
 
+## Fine-tuning kev-4b, and apps it never saw
+
+The text-only [Kev](https://github.com/jaredpalmer/kev)-4B decision model was fine-tuned on data crawled from the
+emulator itself: 233 Settings and Clock screens, goals written by a local LLM, every record in exactly the request
+`eval.py` sends. The eval tasks' targets and end pages were held out. Pipeline, held-out rules and gotchas:
+[`finetune/README.md`](finetune/README.md). All numbers, per task: [`results-kev4b-comparison.md`](results-kev4b-comparison.md).
+
+| tasks solved | kev-4b | round 1 | round 2 | round 3 | d3:4b (screenshots) |
+|---|---|---|---|---|---|
+| 30 Settings tasks, experiment loop | 9 | **17** | 15 | 16 | 20 |
+| 30 Settings tasks, original loop | 3 | 16 | 13 | **17** | 19 |
+| Phone app, 10 tasks (never crawled) | 2 | 3 | 2 | 2 | 5 |
+| Contacts / Files / Messages, 10 tasks (never crawled) | 0 | 1 | 1 | 0 | 3 |
+
+- Round 1 (crawled data) roughly doubles kev-4b inside the crawled app, about 10 points short of d3:4b with screenshots.
+- Round 2 added on-policy corrections (the model's own rollouts, labelled from the crawl graph); round 3 retrained
+  from kev-4b on cleaned data (a review found held-out pages leaking in as "wrong turn, go back" records) plus
+  home-screen app choices. In the experiment loop neither beat round 1 (15 and 16 vs 17); in the original loop round
+  3 solved one task more (17 vs 16), within one training seed's noise. kev's server is deterministic, so each cell is
+  one run per task.
+- Nothing transfers to unseen apps: the fine-tunes open Settings from the home screen for most Phone goals.
+
+New task sets: [`tasks-phone.json`](tasks-phone.json) and [`tasks-apps.json`](tasks-apps.json) (`--tasks`).
+The runners in `finetune/run/` are the ones used here and still carry this machine's paths.
+
 ## Demo videos
 
 `demo.py OUT_DIR [--model d3:4b] [--task-ids a,b]` records one video per task: the emulator screen

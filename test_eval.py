@@ -272,5 +272,14 @@ class Count(unittest.TestCase):
         self.assertEqual(sum(k.startswith("c") for k in crit(bodies[1])), 22)
 
 
+class Verify(unittest.TestCase):
+    def test_info_enforces_package(self):
+        rows = ["Sort by", "First name"]
+        task = {"kind": "info", "package": "^com\\.google\\.android\\.dialer$"}
+        self.assertTrue(E.verify(task, "Settings", "com.google.android.dialer", rows, "First name"))
+        self.assertFalse(E.verify(task, "Settings", "com.google.android.contacts", rows, "First name"))
+        self.assertTrue(E.verify({"kind": "info"}, "Settings", "com.android.settings", rows, "First name"))
+
+
 if __name__ == "__main__":
     unittest.main()

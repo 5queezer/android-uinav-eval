@@ -13,7 +13,7 @@ from PIL import Image
 SERIAL = os.environ.get("ANDROID_SERIAL", "emulator-5560")
 OLLAMA = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 os.environ.setdefault("ANDROID_HOME", str(Path.home() / "Android/Sdk"))
-TEXT_ONLY = {"tev1", "kev"}  # model families that reject images with HTTP 400
+TEXT_ONLY = {"tev1", "kev", "open-jev"}  # model families that reject or ignore images
 MAX_CANDIDATES = 23  # the choice question allows 26 keys; three are scroll_down, back, stuck
 MAX_OPTIONS = 26  # choice keys a/b/../z; candidates are trimmed when more fixed options are offered
 MAX_ANSWERS = 25  # plus "none"
@@ -278,8 +278,9 @@ def contains(hay, needle):
 
 
 def verify(task, title, pkg, rows, expected):
-    if task["kind"] == "info":
-        return contains("\n".join(rows), expected)
+    if task["kind"] == "info":  # with a package: the value must be shown by that app
+        return (re.search(task.get("package", ""), pkg) is not None
+                and contains("\n".join(rows), expected))
     if task["kind"] == "set":
         return re.search(task["expect"], sh(task["check_cmd"]).strip()) is not None
     text = f"window: {title}\n" + "\n".join(rows)
