@@ -93,6 +93,8 @@ def main():
     def explore(path):
         nonlocal count
         lay, title, cands = capture()
+        if title == "?":  # an unreadable screen: not recorded, a dead end
+            return
         key = screen_key(title, cands)
         if key in seen or count >= ev_args.max_screens:
             return

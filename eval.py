@@ -278,8 +278,9 @@ def contains(hay, needle):
 
 
 def verify(task, title, pkg, rows, expected):
-    if task["kind"] == "info":
-        return contains("\n".join(rows), expected)
+    if task["kind"] == "info":  # with a package: the value must be shown by that app
+        return (re.search(task.get("package", ""), pkg) is not None
+                and contains("\n".join(rows), expected))
     if task["kind"] == "set":
         return re.search(task["expect"], sh(task["check_cmd"]).strip()) is not None
     text = f"window: {title}\n" + "\n".join(rows)

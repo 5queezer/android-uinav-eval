@@ -1,5 +1,6 @@
 #!/bin/bash
 # Append round 3 and the drawer-app test to results-kev4b-comparison.md (after r3-window.sh).
+set -eo pipefail  # a failed report step (python, compare.py) fails the script, not just the final tail
 cd ~/Projects/uinav-wt-android-eval-exp1/android-eval || exit 1
 {
 echo

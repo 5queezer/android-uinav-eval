@@ -278,8 +278,9 @@ android-v2 = android-v1 + 1 epoch on 1,333 states the v1 model visited on 200 tr
 
 ### Round 3 conclusions (2026-10-30)
 
-- **Held-out pages:** v3 is the best of the three on choice 0.814 and done 0.975 (calibrated T 2.05). These dev pages
-  are clean for v1 and v3; v2's dev number is not (rollouts on dev pages).
+- **Held-out pages:** v3 leads on done accuracy (0.975, calibrated T 2.05); on choice it is second (0.814), behind
+  v2's 0.821. These dev pages are clean for v1 and v3; v2's dev number is not (rollouts on dev pages), so v3 is the
+  best of the clean models on both.
 - **30 Settings tasks:** v3 solves 16/30 with the experiment loop and 17/30 with the original loop. v1 solves 17 and
   16. So v3 is on par with v1, not better.
   - The clean holdout gained stopwatch_start, one of the leaked pages.
@@ -291,5 +292,19 @@ android-v2 = android-v1 + 1 epoch on 1,333 states the v1 model visited on 200 tr
     most goals ("Open YouTube and ..."), while Phone goals ("Show my recent calls") do not.
   - Drawer apps: every kev variant solves 0-1/10, against d3:4b at 3/10 (23%).
 - **Takeaway:** crawled in-app data takes text-only kev-4b from 30% to ~55% inside the app it was crawled from, about
-  10 points behind d3:4b with screenshots. Neither on-policy corrections nor a few home-screen examples moved it
-  further, and nothing transfers to unseen apps. More apps in the crawl, or a vision model, is the next lever.
+  10 points behind d3:4b with screenshots. In the experiment loop neither on-policy corrections nor a few home-screen
+  examples moved it further (v2 15/30, v3 16/30 against v1 17/30); in the original loop v3 solves one task more than
+  v1 (17/30 against 16/30), within one seed's noise. Nothing transfers to unseen apps. More apps in the crawl, or a
+  vision model, is the next lever.
+
+## Next: v4 (planned, not run)
+
+- Retrain from kev-4b (not from v1-v3) on the cleaned round-1 data, every record in the experiment loop's format
+  (`build_data.py --loop exp --held-from data/v1/dev.jsonl`, so the dev pages stay the same).
+- On-policy corrections with path labels (`label_onpolicy.py --labels path`); distance labels only as an ablation.
+- Extra terminal done/answer examples (`--terminal-copies`), including done after a wrong turn and back
+  (`--messy-frac`). No home-screen extras.
+- Three training seeds. Checkpoint selection by success on the live dev suite (`tasks-dev.json`, dev pages only) and
+  by reached-to-success conversion (`compare.py --metrics`), never by the 30 test tasks.
+- Pass: keep the existing successes on the 30 tasks while converting more reached episodes into successes, without
+  ever training on an eval task.

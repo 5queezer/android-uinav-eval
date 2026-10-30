@@ -10,6 +10,7 @@ for m in ft2 ft base; do
   fuser -k 8009/tcp 2>/dev/null; sleep 3
   (cd $KEV && KEV_CUDA_GRAPHS=0 CUDA_VISIBLE_DEVICES= exec uv run --extra serve python $S/kev_serve_nofla.py --run $R --port 8009 --device cpu) >> $S/kev-serve-cpu.log 2>&1 &
   for i in $(seq 1 120); do curl -s -m 2 localhost:8009/v1/models > /dev/null && break; sleep 3; done
+  curl -s -m 2 localhost:8009/v1/models > /dev/null || { log "server $m did not come up"; exit 1; }
   log "serving $m"
   for attempt in $(seq 1 10); do
     timeout 5 adb -s emulator-5560 shell echo ok > /dev/null 2>&1 || "$S/emu-headless.sh" || exit 2

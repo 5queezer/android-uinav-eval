@@ -6,7 +6,7 @@ usage: demo.py OUT_DIR [--model d3:4b] [--floor 0.25] [--task-ids a,b]   (resuma
 import argparse, json, subprocess, sys, textwrap, time
 from pathlib import Path
 
-EVAL_DIR = Path.home() / "Projects/uinav-wt-android-eval-exp1/android-eval"
+EVAL_DIR = Path(__file__).resolve().parents[2]  # android-eval/, two levels up from finetune/run/
 sys.path.insert(0, str(EVAL_DIR))
 import eval as ev  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
@@ -126,12 +126,17 @@ def record(task, args, out):
     ev.reset, ev.systemone = reset, systemone
     try:
         rec, _ = ev.episode(args.model, task, args)
+        time.sleep(2.0)  # show where it ended
+        end = time.time() - rec_proc["t0"]
     finally:
         ev.reset, ev.systemone = orig_reset, orig_sys
-    time.sleep(2.0)  # show where it ended
-    end = time.time() - rec_proc["t0"]
-    adb("shell", "pkill", "-INT", "screenrecord")
-    rec_proc["p"].wait(timeout=20)
+        if "p" in rec_proc:  # stop the recorder even when the episode failed
+            try:  # bounded: a hung device must not block the runner's emulator restart
+                adb("shell", "pkill", "-INT", "screenrecord", timeout=10)
+                rec_proc["p"].wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                rec_proc["p"].kill()
+                raise
     time.sleep(0.5)
     adb("pull", "/sdcard/demo.mp4", str(out / f"{task['id']}.raw.mp4"), timeout=60, check=True)
     rec |= {"marks": [round(m, 2) for m in marks], "end": round(end, 2)}

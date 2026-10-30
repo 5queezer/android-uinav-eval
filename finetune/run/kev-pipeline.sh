@@ -65,13 +65,15 @@ for m in base ft; do
   if complete $EV/results-kev4b-$m && complete $EV/results-kev4b-$m-exp1; then continue; fi
   serve $R $m || exit 1
   export OLLAMA_HOST=http://127.0.0.1:8008
+  ok=
   for attempt in $(seq 1 15); do
     "$S/emu-headless.sh" || exit 2
     (cd $EV && python3 -u eval.py --models kev --runs 5 --floor 0.25 --max-steps 15 --out results-kev4b-$m-exp1 \
       && python3 -u eval.py --models kev --runs 5 --floor 0.25 --max-steps 15 --out results-kev4b-$m \
-           --no-stuck-option --no-toggle-state --no-scroll-end) && break
+           --no-stuck-option --no-toggle-state --no-scroll-end) && { ok=1; break; }
     log "eval $m interrupted, restarting the emulator (attempt $attempt)"
   done
+  [ -n "$ok" ] || { log "eval $m failed after 15 attempts"; exit 1; }
   kill $SERVER; wait $SERVER 2>/dev/null; fuser -k 8008/tcp 2>/dev/null; sleep 5
 done
 

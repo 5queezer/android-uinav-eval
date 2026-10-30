@@ -43,11 +43,13 @@ export OLLAMA_HOST=http://127.0.0.1:8008
 evals "--models kev --runs 1 --floor 0.25 --max-steps 15 --out results-kev4b-ft3-exp1" || exit 1
 evals "--models kev --runs 1 --floor 0.25 --max-steps 15 --out results-kev4b-ft3 --no-stuck-option --no-toggle-state --no-scroll-end" || exit 1
 evals "--models kev $P --out results-phone-kev4b-ft3" || exit 1
+ok=
 for attempt in $(seq 1 10); do  # demo videos of the round-3 model (demo.py skips finished tasks)
   timeout 5 adb -s emulator-5560 shell echo ok > /dev/null 2>&1 || "$S/emu-headless.sh" || break
-  python3 -u $S/demo.py $S/demo-kev-ft3 --model kev --floor 0.25 && break
+  python3 -u $S/demo.py $S/demo-kev-ft3 --model kev --floor 0.25 && { ok=1; break; }
   "$S/emu-headless.sh" || break
 done
+[ -n "$ok" ] || { log "demo videos failed"; exit 1; }
 # the drawer apps (Contacts, Files, Messages): a second new-app test, for every model
 A="--tasks tasks-apps.json --runs 1 --floor 0.25 --max-steps 15"
 evals "--models kev $A --out results-apps-kev4b-ft3" || exit 1
@@ -61,6 +63,6 @@ fuser -k 8008/tcp 2>/dev/null
 unset OLLAMA_HOST
 evals "--models d3:4b --tasks tasks-apps.json --runs 3 --floor 0.25 --max-steps 15 --out results-apps-d3" || exit 1
 curl -s localhost:11434/api/generate -d '{"model":"d3:4b","keep_alive":0}' > /dev/null
-for p in $(pgrep qemu-system-x86); do kill "$p"; done
-"$S/report-r3.sh" > /dev/null
+for p in $(pgrep -f 'qemu-system-x86.*(-avd uinav-test .*-port 5560|-port 5560 .*-avd uinav-test)( |$)'); do kill "$p"; done
+"$S/report-r3.sh" > /dev/null || { log "report failed"; exit 1; }
 log "done"

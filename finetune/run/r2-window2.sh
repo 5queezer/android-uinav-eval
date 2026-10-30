@@ -43,11 +43,13 @@ export OLLAMA_HOST=http://127.0.0.1:8008
 evals "--models kev --runs 1 --floor 0.25 --max-steps 15 --out results-kev4b-ft2-exp1" || exit 1
 evals "--models kev --runs 1 --floor 0.25 --max-steps 15 --out results-kev4b-ft2 --no-stuck-option --no-toggle-state --no-scroll-end" || exit 1
 evals "--models kev $P --out results-phone-kev4b-ft2" || exit 1
+ok=
 for attempt in $(seq 1 10); do  # demo videos of the round-2 model (demo.py skips finished tasks)
   timeout 5 adb -s emulator-5560 shell echo ok > /dev/null 2>&1 || "$S/emu-gpu.sh" || break
-  python3 -u $S/demo.py $S/demo-kev-ft2 --model kev --floor 0.25 && break
+  python3 -u $S/demo.py $S/demo-kev-ft2 --model kev --floor 0.25 && { ok=1; break; }
   "$S/emu-gpu.sh" || break
 done
+[ -n "$ok" ] || { log "demo videos failed"; exit 1; }
 serve $KEV/runs/android-v1 || exit 1
 evals "--models kev $P --out results-phone-kev4b-ft" || exit 1
 serve jaredpalmer/kev-4b || exit 1

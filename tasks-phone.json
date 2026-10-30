@@ -8,5 +8,5 @@
  {"id": "phone_blocked", "kind": "open", "goal": "Show my blocked numbers", "package": "^com\\.android\\.server\\.telecom$", "layout_re": "^window: Blocked numbers$"},
  {"id": "phone_quick_responses", "kind": "open", "goal": "Edit the quick text replies I can send when declining a call", "package": "^com\\.android\\.server\\.telecom$", "layout_re": "^window: Edit quick responses$"},
  {"id": "phone_call_settings", "kind": "open", "goal": "Open the call settings", "package": "^com\\.android\\.phone$", "layout_re": "^window: Call settings$"},
- {"id": "phone_sort_order", "kind": "info", "goal": "How are contacts sorted in the Phone app?", "expected_cmd": "echo First name"}
+ {"id": "phone_sort_order", "kind": "info", "goal": "How are contacts sorted in the Phone app?", "package": "^com\\.google\\.android\\.dialer$", "expected_cmd": "echo First name"}
 ]

@@ -39,7 +39,9 @@ emulator itself: 233 Settings and Clock screens, goals written by a local LLM, e
 - Round 1 (crawled data) roughly doubles kev-4b inside the crawled app, about 10 points short of d3:4b with screenshots.
 - Round 2 added on-policy corrections (the model's own rollouts, labelled from the crawl graph); round 3 retrained
   from kev-4b on cleaned data (a review found held-out pages leaking in as "wrong turn, go back" records) plus
-  home-screen app choices. Neither beat round 1; kev's server is deterministic, so each cell is one run per task.
+  home-screen app choices. In the experiment loop neither beat round 1 (15 and 16 vs 17); in the original loop round
+  3 solved one task more (17 vs 16), within one training seed's noise. kev's server is deterministic, so each cell is
+  one run per task.
 - Nothing transfers to unseen apps: the fine-tunes open Settings from the home screen for most Phone goals.
 
 New task sets: [`tasks-phone.json`](tasks-phone.json) and [`tasks-apps.json`](tasks-apps.json) (`--tasks`).
