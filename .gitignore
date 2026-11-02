@@ -7,3 +7,6 @@ finetune/run/*.log
 finetune/run/demo-*/
 demo-videos*/
 results-*/img/
+dicio/apk/
+dicio/*.log
+results-dicio*/

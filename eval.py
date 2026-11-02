@@ -10,6 +10,8 @@ from pathlib import Path
 
 from PIL import Image
 
+import gen_agents as G
+
 SERIAL = os.environ.get("ANDROID_SERIAL", "emulator-5560")
 OLLAMA = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 os.environ.setdefault("ANDROID_HOME", str(Path.home() / "Android/Sdk"))
@@ -301,13 +303,15 @@ def systemone(body):
 def episode(model, task, args):
     reset(args.snapshot)
     vision = is_vision(model)
+    gen = G.adapter(model) if G.is_gen(model) else None  # a generative agent (gen_agents.py)
     info = task["kind"] == "info"
     expected = expected_value(task) if info else None
     history, steps, shots, first_reached = [], [], [], None
     seen, scrolled, exhausted, flipped = {}, set(), set(), set()  # per episode, for the experiment flags
     toggled = scroll = None  # (chosen, candidates) of a toggle tap / (action, title, signature) of a scroll
-    rec = {"model": model, "task": task["id"], "kind": task["kind"], "floor": args.floor, "expected": expected,
-           "variant": args.variant}
+    notes, said = [], None  # gen: the model's own history entries; its last non-final answer
+    rec = {"model": model, "task": task["id"], "kind": task["kind"], "floor": 0.0 if gen else args.floor,
+           "expected": expected, "variant": args.variant}  # gen: no confidence floor applies
     for step in range(1, args.max_steps + 2):
         t, ms = time.time(), {}
         lay = layout()
@@ -341,6 +345,48 @@ def episode(model, task, args):
         if args.stuck_option and seen[sig] >= 3:  # replaces the model's stuck option
             return rec | {"outcome": "stuck", "stuck_reason": "repeat", "steps": step - 1,
                           "first_reached_step": first_reached, "answer": None, "step_log": steps}, shots
+        if gen:  # ---- generative agent: screenshot in, action text out; no candidates, confidence or floor
+            t = time.time()
+            im, image = screenshot(args.img_px)
+            shots.append(im)
+            ms["shot"] = round((time.time() - t) * 1000)
+            t = time.time()
+            reply, a, note = G.decide(gen, task["goal"], notes, image)
+            ms["model"] = round((time.time() - t) * 1000)
+            said = a["text"] if a["type"] == "answer" else said
+            answer = (a["answer"] or said) if a["type"] == "finish" else None
+            # its own grounding: the tap goes where the model points; record the a11y element there, for analysis
+            on = G.hit(a, parse_layout(lay, task["goal"], args.toggle_state, 10 ** 6)[1])
+            extra = {}
+            if a["type"] == "finish":  # scored like done >= 0.8
+                gate = ("false_done" if not reached else
+                        "wrong_answer" if info and not (answer and contains(answer, expected)) else "success")
+            elif a["type"] == "abort":
+                gate, extra["stuck_reason"] = "stuck", "model"
+            elif on and is_unsafe(on):
+                gate = "unsafe_blocked"
+            else:
+                gate = "noop" if a["type"] in ("noop", "answer") else "act"
+            label = f" on {on['role']} '{on['name']}'" if on else ""
+            steps.append({"step": step, "window": title, "app": pkg, "reached": reached,
+                          "candidates": [f"{c['id']}:{c['name']}" for c in cands], "action": G.label(a),
+                          "chosen": describe(on) if on else None, "conf": None, "top3": None,
+                          "done": 1.0 if a["type"] == "finish" else 0.0, "answer": answer, "gate": gate, "ms": ms,
+                          "reply": reply, "parsed": a} | extra)
+            print(f"  s{step:<2} {G.label(a)}{label} -> {gate} [{title}] reached={reached} "
+                  f"model={ms['model']}ms layout={ms['layout']}ms", flush=True)
+            if gate not in ("act", "noop"):
+                return rec | extra | {"outcome": gate, "steps": step, "first_reached_step": first_reached,
+                                      "answer": answer, "step_log": steps}, shots
+            t = time.time()
+            for cmd in G.commands(a):
+                adb(*cmd)
+            if a["type"] == "wait":
+                time.sleep(min(a["secs"], 5))
+            ms["act"] = round((time.time() - t) * 1000)
+            notes.append(note)
+            time.sleep(args.settle)
+            continue
         fixed = options(args, title, scrolled, exhausted)
         if len(cands) + len(fixed) > MAX_OPTIONS:  # keep the best-ranked candidates
             cands = parse_layout(lay, task["goal"], args.toggle_state, MAX_OPTIONS - len(fixed))[1]
@@ -422,7 +468,8 @@ def episode(model, task, args):
 def main():
     here = Path(__file__).parent
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--models", required=True, help="comma-separated, e.g. clef-flash,tev1:4b")
+    p.add_argument("--models", required=True, help="comma-separated, e.g. clef-flash,tev1:4b; gen:<name> runs a "
+                   "generative agent (gen:gelab-zero-4b, gen:qwen3-vl-4b, gen:gui-owl-1.5-4b)")
     p.add_argument("--runs", type=int, default=1)
     p.add_argument("--tasks", default=str(here / "tasks.json"))
     p.add_argument("--task-ids", help="comma-separated filter")
@@ -448,6 +495,9 @@ def main():
     if args.task_ids:
         ids = args.task_ids.split(",")
         tasks = [t for t in tasks if t["id"] in ids]
+    for model in args.models.split(","):  # fail on an unknown gen:<name> before the first episode
+        if G.is_gen(model):
+            G.adapter(model)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     prev = None
@@ -463,9 +513,14 @@ def main():
         unload(prev)
         t = time.time()
         try:  # load before timing steps (decision models reject /api/generate loads, but it unloads them)
-            post("/v1/systemone", {"model": model, "keep_alive": "30m", "state": "warm-up",
-                                   "questions": {"q": {"type": "noul", "instructions": "Is this a test?"}}})
-            print(f"== {model}: loaded in {time.time() - t:.1f}s, {len(todo)} episodes", flush=True)
+            if G.is_gen(model):
+                G.adapter(model).warm()
+            else:
+                post("/v1/systemone", {"model": model, "keep_alive": "30m", "state": "warm-up",
+                                       "questions": {"q": {"type": "noul", "instructions": "Is this a test?"}}})
+            print(f"== {model}: loaded in {time.time() - t:.1f}s, {len(todo)} episodes"
+                  f"{' (generative agent: no confidence floor, recorded as floor 0.0)' if G.is_gen(model) else ''}",
+                  flush=True)
         except Exception as e:
             print(f"== {model}: warm-up failed ({e}); running anyway, {len(todo)} episodes", flush=True)
         prev = model
@@ -476,7 +531,8 @@ def main():
                 rec, shots = episode(model, task, args)
             except Exception as e:  # keep going (unless the emulator is gone); the record says what broke
                 fatal = e
-                rec, shots = {"model": model, "task": task["id"], "kind": task["kind"], "floor": args.floor,
+                rec, shots = {"model": model, "task": task["id"], "kind": task["kind"],
+                              "floor": 0.0 if G.is_gen(model) else args.floor,
                               "variant": args.variant, "outcome": "error", "error": f"{type(e).__name__}: {e}",
                               "steps": 0, "step_log": []}, []
             else:
@@ -506,6 +562,8 @@ def main():
 
 def unload(model):
     try:
+        if model and G.is_gen(model):
+            model = G.adapter(model).ollama  # None when not served by Ollama
         if model:
             post("/api/generate", {"model": model, "keep_alive": 0}, timeout=60)
     except Exception as e:

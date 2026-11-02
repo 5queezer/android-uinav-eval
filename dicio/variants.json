@@ -1,0 +1,8 @@
+{
+  "upstream": {"package": "org.stypox.dicio.evalupstreammain", "apk": "dicio/apk/upstream.apk",
+               "settings": {"4": 1, "5": 1, "8": 1, "11": 1}},
+  "branch-text": {"package": "org.stypox.dicio.evalremoteengine", "apk": "dicio/apk/branch.apk",
+                  "settings": {"4": 1, "5": 1, "8": 1, "11": 1}},
+  "llm": {"package": "org.stypox.dicio.evalremoteengine", "apk": "dicio/apk/branch.apk",
+          "settings": {"4": 1, "5": 1, "8": 1, "11": 2, "13": "http://127.0.0.1:8011/v1"}, "reverse": [8011]}
+}

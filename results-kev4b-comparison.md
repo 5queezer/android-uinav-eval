@@ -308,3 +308,90 @@ android-v2 = android-v1 + 1 epoch on 1,333 states the v1 model visited on 200 tr
   by reached-to-success conversion (`compare.py --metrics`), never by the 30 test tasks.
 - Pass: keep the existing successes on the 30 tasks while converting more reached episodes into successes, without
   ever training on an eval task.
+
+## Round 4 (2026-10-30): v4 and the v4b ablation, selected on the live dev suite
+
+All retrained from kev-4b on the cleaned round-1 data in the experiment-loop format only, path labels on the on-policy
+states plus one goal-swapped copy, messy-history terminal records, at most 6 records per goal and action class.
+- **v4** wrote every terminal record twice (31% done labels). Seed 0 learnt to stop early: 24% false done on the dev
+  suite and 13% on the test tasks, mostly one page before the target. The other two seeds were not trained.
+- **v4b** is the same data with terminal records written once (17% done labels). Two seeds.
+- Selection used only `tasks-dev.json` (17 tasks on the 12 dev pages), by success, then reached-to-success conversion.
+  **v4b-s1 is chosen** (dev 35%). The test results below were not used for the choice.
+
+### Live dev suite (selection)
+
+| name | n | success | reached | success / reached | left after reaching (open/info) | did not stop (open/info) | reached at the end (open/info) | wrong_answer | false_done |
+|---|---|---|---|---|---|---|---|---|---|
+| kev-4b | 17 | 0% | 0% | - | 0 | 0 | 0 | 0% | 18% |
+| v1 | 17 | 24% | 24% | 100% | 0 | 0 | 0 | 0% | 12% |
+| v3 | 17 | 29% | 29% | 100% | 0 | 0 | 0 | 0% | 12% |
+| v4-s0 | 17 | 12% | 18% | 67% | 1 | 0 | 0 | 0% | 24% |
+| v4b-s0 | 17 | 29% | 29% | 100% | 0 | 0 | 0 | 0% | 12% |
+| v4b-s1 | 17 | 35% | 35% | 100% | 0 | 0 | 0 | 0% | 12% |
+
+### 30 test tasks, experiment loop (reported)
+
+| name | n | success | reached | success / reached | left after reaching (open/info) | did not stop (open/info) | reached at the end (open/info) | wrong_answer | false_done |
+|---|---|---|---|---|---|---|---|---|---|
+| v1 | 150 | 57% | 63% | 89% | 5 | 5 | 0 | 0% | 0% |
+| v3 | 30 | 53% | 63% | 84% | 2 | 0 | 0 | 3% | 0% |
+| v4-s0 | 30 | 53% | 63% | 84% | 1 | 1 | 0 | 3% | 13% |
+| v4b-s0 | 30 | 57% | 73% | 77% | 0 | 4 | 0 | 3% | 0% |
+| v4b-s1 | 30 | 63% | 73% | 86% | 1 | 2 | 0 | 0% | 0% |
+| d3:4b | 30 | 67% | 67% | 100% | 0 | 0 | 0 | 0% | 0% |
+
+- **v4b-s1 solves 19/30 (63%)**, the best kev so far and one task short of d3:4b with screenshots (20/30). It reaches
+  the goal in 73% of tasks (d3:4b 67%), with no false done.
+- Against round 1 it keeps every success but wifi_name. It gains bold_text, high_contrast_text and stopwatch_start;
+  d3:4b solves neither of the first two.
+- The two v4b seeds differ by two tasks (17 vs 19). Seed variance is as large as most round-to-round differences
+  measured before.
+- Terminal emphasis cuts both ways: duplicating terminal records (v4) made the model stop early. Single terminal
+  records plus messy-history examples (v4b) improved reaching without false stops.
+
+## Ready-made generative GUI agents (gen: route, one run each)
+
+GELab-Zero-4B-preview and GUI-Owl-1.5-4B-Instruct (Q8_0 GGUF on llama-server) and Qwen3-VL-4B-Instruct (Ollama), all
+from screenshots, driven by `gen_agents.py` with the experiment-loop harness. GUI-Owl uses the official history_n=4
+message format (the last four steps as screenshot + reply turns); "GUI-Owl-h0" is the earlier run with only the
+current screenshot. App-open actions (GELab AWAKE, GUI-Owl open) are no-ops.
+
+### 30 Settings test tasks
+
+| name | n | success | reached | success / reached | left after reaching (open/info) | did not stop (open/info) | reached at the end (open/info) | wrong_answer | false_done |
+|---|---|---|---|---|---|---|---|---|---|
+| GELab | 30 | 67% | 67% | 100% | 0 | 0 | 0 | 0% | 7% |
+| GUI-Owl | 30 | 67% | 67% | 100% | 0 | 0 | 0 | 0% | 3% |
+| GUI-Owl-h0 | 30 | 17% | 67% | 25% | 3 | 5 | 0 | 0% | 0% |
+| Qwen3-VL | 30 | 63% | 70% | 90% | 0 | 2 | 0 | 0% | 10% |
+| kev-v4b-s1 | 30 | 63% | 73% | 86% | 1 | 2 | 0 | 0% | 0% |
+| d3:4b | 30 | 67% | 67% | 100% | 0 | 0 | 0 | 0% | 0% |
+
+
+### tasks-phone.json (d3:4b three runs, kev only round 3)
+
+| name | n | success | reached | success / reached | left after reaching (open/info) | did not stop (open/info) | reached at the end (open/info) | wrong_answer | false_done |
+|---|---|---|---|---|---|---|---|---|---|
+| GELab | 10 | 50% | 70% | 71% | 1 | 1 | 0 | 0% | 0% |
+| GUI-Owl | 10 | 60% | 90% | 67% | 2 | 0 | 0 | 10% | 10% |
+| Qwen3-VL | 10 | 30% | 40% | 75% | 1 | 0 | 0 | 0% | 40% |
+| kev-v3 | 10 | 20% | 20% | 100% | 0 | 0 | 0 | 0% | 10% |
+| d3:4b | 30 | 47% | 60% | 78% | 3 | 1 | 0 | 0% | 10% |
+
+### tasks-apps.json (d3:4b three runs, kev only round 3)
+
+| name | n | success | reached | success / reached | left after reaching (open/info) | did not stop (open/info) | reached at the end (open/info) | wrong_answer | false_done |
+|---|---|---|---|---|---|---|---|---|---|
+| GELab | 10 | 20% | 30% | 67% | 1 | 0 | 0 | 0% | 40% |
+| GUI-Owl | 10 | 20% | 50% | 40% | 3 | 0 | 0 | 0% | 40% |
+| Qwen3-VL | 10 | 40% | 70% | 57% | 3 | 0 | 0 | 0% | 40% |
+| kev-v3 | 10 | 0% | 0% | - | 0 | 0 | 0 | 0% | 10% |
+| d3:4b | 30 | 23% | 43% | 54% | 3 | 3 | 0 | 0% | 17% |
+
+- Without training, GELab and GUI-Owl solve 20/30 Settings tasks (= d3:4b), Qwen3-VL 19/30 (= kev v4b-s1).
+- GUI-Owl needs its history: with only the current screenshot it reached the goal as often (67%) but stopped in a
+  quarter of those episodes (5/30); with history_n=4 it stops every time.
+- Median model time per step: Qwen3-VL 0.9 s, GUI-Owl 4.1 s (p90 18 s with five images), GELab 5.1 s.
+- On the drawer apps every gen model declares done falsely in 40% of episodes; the no-op app-open action may
+  contribute (not checked).

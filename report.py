@@ -22,7 +22,7 @@ def at_floor(r, f):
     for s in r["step_log"]:
         if s["done"] >= 0.8:
             return r["outcome"]
-        if s["conf"] < f:
+        if s["conf"] is not None and s["conf"] < f:  # None: a generative agent, no confidence
             return "uncertain"
     return r["outcome"]
 

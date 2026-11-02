@@ -26,26 +26,27 @@ evals() {  # $1 = eval.py arguments, with emulator restarts (eval.py resumes)
 }
 E="--runs 1 --floor 0.25 --max-steps 15"
 export OLLAMA_HOST=http://127.0.0.1:8008
-for seed in ${SEEDS:-0 1 2}; do
-  RUN=$KEV/runs/android-v4-s$seed
+DATA=${DATA:-v4} NAME=${NAME:-v4}  # data/$DATA/train-all.jsonl -> runs/android-$NAME-s<seed>
+for seed in ${SEEDS-0 1 2}; do  # SEEDS="" runs only the baselines below
+  RUN=$KEV/runs/android-$NAME-s$seed
   if [ ! -f $RUN/head.pt ]; then
     log "training seed $seed"
-    (cd $KEV && uv run python -m kev.train --data $FT/data/v4/train-all.jsonl --base Qwen/Qwen3.5-4B-Base \
+    (cd $KEV && uv run python -m kev.train --data $FT/data/$DATA/train-all.jsonl --base Qwen/Qwen3.5-4B-Base \
        --base_revision 1001bb4d826a52d1f399e183466143f4da7b741b --init_from jaredpalmer/kev-4b --epochs 1 --lr 2e-5 \
        --batch 1 --accum 8 --dtype bf16 --weights_dtype bf16 --checkpointing 1 --device cuda --max_state 1536 \
        --seed $seed --out $RUN) || { log "training seed $seed failed"; exit 1; }
   fi
   if [ ! -f $RUN/.calibrated ]; then
     log "benchmark + calibration seed $seed"
-    (cd $KEV && uv run python $S/kev_bench_long.py --run $RUN --data $FT/data/v1/dev.jsonl --out runs/android-dev-v4-s$seed) || exit 1
-    (cd $KEV && uv run python scripts/calibrate_checkpoint.py --run $RUN --rows runs/android-dev-v4-s$seed/rows.json \
-       --allow-in-distribution) > $S/kev-calibrate-r4-s$seed.log 2>&1 && touch $RUN/.calibrated \
+    (cd $KEV && uv run python $S/kev_bench_long.py --run $RUN --data $FT/data/v1/dev.jsonl --out runs/android-dev-$NAME-s$seed) || exit 1
+    (cd $KEV && uv run python scripts/calibrate_checkpoint.py --run $RUN --rows runs/android-dev-$NAME-s$seed/rows.json \
+       --allow-in-distribution) > $S/kev-calibrate-r4-$NAME-s$seed.log 2>&1 && touch $RUN/.calibrated \
        || { log "calibration seed $seed failed"; exit 1; }
-    grep -E "^fit rows|wrote" $S/kev-calibrate-r4-s$seed.log
+    grep -E "^fit rows|wrote" $S/kev-calibrate-r4-$NAME-s$seed.log
   fi
   serve $RUN || exit 1
-  evals "--models kev --tasks tasks-dev.json $E --out results-dev-kev4b-v4-s$seed" || exit 1
-  evals "--models kev $E --out results-kev4b-v4-s$seed-exp1" || exit 1
+  evals "--models kev --tasks tasks-dev.json $E --out results-dev-kev4b-$NAME-s$seed" || exit 1
+  evals "--models kev $E --out results-kev4b-$NAME-s$seed-exp1" || exit 1
   fuser -k 8008/tcp 2>/dev/null
   log "seed $seed done"
 done
